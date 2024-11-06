@@ -500,7 +500,7 @@ int main() {
     const char* nome_arquivo = "dados_carros2.txt";
     iniciar_arquivo_dados(nome_arquivo);
     //Caregar os dados do arquivo se ele existir 
-
+    carregarDadosDoArquivo(nome_arquivo, arvore);
     int opcao;
     while (1) {
         exibir_menu();
