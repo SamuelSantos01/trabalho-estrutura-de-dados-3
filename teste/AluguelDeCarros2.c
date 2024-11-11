@@ -1,14 +1,19 @@
-#include "EstruturaDeDados.h"
+#include "EstruturaDeDados2.h"
+#include <locale.h>
+
 
 //funções para a manipulação de arquivos
 void iniciar_arquivo_dados(const char* nome_arquivo) {
+    printf("Tentando criar ou abrir o arquivo: %s\n", nome_arquivo);
     FILE* arquivo = fopen(nome_arquivo, "a+"); 
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo de dados");
         exit(1);
     }
+    printf("Arquivo criado com sucesso: %s\n", nome_arquivo);
     fclose(arquivo); 
 }
+
 
 long inserir_registro(const Carro* carro, const char* nome_arquivo) {
     FILE* arquivo = fopen(nome_arquivo, "a+"); 
@@ -85,7 +90,16 @@ void atualizar_registro(long offset, const Carro* carro, const char* nome_arquiv
 
     fclose(arquivo);
 }
-
+// Função nova para salvar os dados no arquivo
+void salvarDadosNoArquivo(const char* nome_arquivo, ArvoreB* arvore) {
+    FILE* arquivo = fopen(nome_arquivo, "wb"); 
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo de dados");
+        exit(1);
+    }
+    escreverArvoreBNoArquivo(arquivo, arvore->raiz);
+    fclose(arquivo);
+}
 //funções para a manipulação da árvore
 
 // Cria uma nova árvore-B
@@ -129,7 +143,25 @@ void inserir_chave(ArvoreB* arvore, const char* placa, long offset) {
         inserir_nao_cheio(raiz, placa, offset);
     }
 }
-
+// Funções novas para escrever a árvore-B no arquivo e carregar do arquivo
+void escreverArvoreBNoArquivo(FILE* arquivo, No* no) {
+    if (no == NULL) return;
+    fwrite(no, sizeof(No), 1, arquivo);
+    if (!no->folha) {
+        for (int i = 0; i <= no->num_chaves; i++) {
+            escreverArvoreBNoArquivo(arquivo, no->filhos[i]);
+        }
+    }
+}
+void carregarDadosDoArquivo(const char* nome_arquivo, ArvoreB* arvore) {
+    FILE* arquivo = fopen(nome_arquivo, "rb");
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo para leitura");
+        exit(1);
+    }
+    fread(arvore->raiz, sizeof(No), 1, arquivo);
+    fclose(arquivo);
+}
 long buscar_chave(ArvoreB* arvore, const char* placa) {
     return buscar_no(arvore->raiz, placa);
 }
@@ -448,46 +480,6 @@ Carro buscar_dados_por_placa(const char* placa) {
     return carro; // ou use uma maneira de indicar que não encontrou
 }
 
-// Função nova para salvar os dados no arquivo
-void salvarDadosNoArquivo(const char* nome_arquivo, ArvoreB* arvore) {
-    FILE* arquivo = fopen(nome_arquivo, "wb"); 
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo de dados");
-        exit(1);
-    }
-    escreverArvoreBNoArquivo(arquivo, arvore->raiz);
-    fclose(arquivo);
-}
-
-// Funções novas para escrever a árvore-B no arquivo e carregar do arquivo
-void escreverArvoreBNoArquivo(FILE* arquivo, No* no) {
-    if (no == NULL) return;
-    fwrite(no, sizeof(No), 1, arquivo);
-    if (!no->folha) {
-        for (int i = 0; i <= no->num_chaves; i++) {
-            escreverArvoreBNoArquivo(arquivo, no->filhos[i]);
-        }
-    }
-}
-
-void carregarDadosDoArquivo(const char* nome_arquivo, ArvoreB* arvore) {
-    FILE* arquivo = fopen(nome_arquivo, "rb");
-    if (arquivo == NULL) {
-        // Se o arquivo não existir, cria um novo arquivo vazio
-        printf("Arquivo não encontrado. Criando um novo arquivo para a árvore-B.\n");
-        arquivo = fopen(nome_arquivo, "wb");
-        if (arquivo == NULL) {
-            perror("Erro ao criar o arquivo binário da árvore-B");
-            exit(1);
-        }
-        fclose(arquivo);
-        return;
-    }
-    
-    // Se o arquivo existe, carrega os dados da árvore-B
-    fread(arvore->raiz, sizeof(No), 1, arquivo);
-    fclose(arquivo);
-}
 
 
 void exibir_menu() {
@@ -504,15 +496,11 @@ void exibir_menu() {
 
 int main() {
     system("chcp 65001");
-
     ArvoreB* arvore = criar_arvore_B(3); // Criar a árvore-B com ordem 3
-    const char* nome_arquivo_dados = "dados_carros.txt";
-    const char* nome_arquivo_binario = "dados_binario.dat";
-    
-    // Inicializar arquivo de dados ASCII e carregar árvore-B do arquivo binário
-    iniciar_arquivo_dados(nome_arquivo_dados);
-    carregarDadosDoArquivo(nome_arquivo_binario, arvore);
-
+    const char* nome_arquivo = "dados_carros2.txt";
+    iniciar_arquivo_dados(nome_arquivo);
+    //Caregar os dados do arquivo se ele existir 
+    carregarDadosDoArquivo(nome_arquivo, arvore);
     int opcao;
     while (1) {
         exibir_menu();
@@ -520,7 +508,7 @@ int main() {
 
         switch (opcao) {
             case 1: {
-                iniciar_arquivo_dados(nome_arquivo_dados);
+                iniciar_arquivo_dados(nome_arquivo);
                 printf("Arquivo de dados iniciado com sucesso.\n");
                 break;
             }
@@ -544,7 +532,7 @@ int main() {
                 printf("Digite a disponibilidade (1 para disponível, 0 para não disponível): ");
                 scanf("%d", &carro.disponivel);
 
-                long offset = inserir_registro(&carro, nome_arquivo_dados);
+                long offset = inserir_registro(&carro, nome_arquivo);
                 if (offset != -1) {
                     inserir_chave(arvore, carro.placa, offset);
                     printf("Registro inserido com sucesso.\n");
@@ -555,8 +543,6 @@ int main() {
                 free(carro.modelo);
                 free(carro.marca);
                 free(carro.categoria);
-
-                salvarDadosNoArquivo(nome_arquivo_binario, arvore);  // Salvar a árvore-B no arquivo binário
                 break;
             }
             case 3: {
@@ -565,7 +551,7 @@ int main() {
                 scanf("%s", placa);
                 long offset = buscar_chave(arvore, placa);
                 if (offset != -1) {
-                    Carro* carro = buscar_registro(offset, nome_arquivo_dados);
+                    Carro* carro = buscar_registro(offset, nome_arquivo);
                     printf("Registro encontrado: \n");
                     printf("Placa: %s, Modelo: %s, Marca: %s, Ano: %d, Diária: %.2f, Categoria: %s, Disponível: %d\n",
                            carro->placa, carro->modelo, carro->marca,
@@ -603,14 +589,12 @@ int main() {
                     scanf("%d", &carro.disponivel);
 
                     strcpy(carro.placa, placa); // Manter a mesma placa
-                    atualizar_registro(offset, &carro, nome_arquivo_dados);
+                    atualizar_registro(offset, &carro, nome_arquivo);
                     printf("Registro atualizado com sucesso.\n");
 
                     free(carro.modelo);
                     free(carro.marca);
                     free(carro.categoria);
-
-                    salvarDadosNoArquivo(nome_arquivo_binario, arvore);  // Salvar a árvore-B no arquivo binário
                 } else {
                     printf("Registro não encontrado.\n");
                 }
@@ -624,8 +608,6 @@ int main() {
                 if (offset != -1) {
                     remover_chave(arvore, placa);
                     printf("Registro removido com sucesso.\n");
-
-                    salvarDadosNoArquivo(nome_arquivo_binario, arvore);  // Salvar a árvore-B no arquivo binário
                 } else {
                     printf("Registro não encontrado.\n");
                 }
@@ -637,6 +619,8 @@ int main() {
                 break;
             }
             case 7: {
+                salvarDadosNoArquivo(nome_arquivo, arvore); // Salavar dados antes de sair
+                escreverArvoreBNoArquivo(arvore, "arvoreB.txt"); // Salvar a árvore b
                 liberar_arvoreB(arvore); // Libera memória da árvore-B
                 printf("Saindo do programa.\n");
                 exit(0);

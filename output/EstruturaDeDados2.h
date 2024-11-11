@@ -1,5 +1,5 @@
-#ifndef ESTRUTURADEDADOS_H
-#define ESTRUTURADEDADOS_H
+#ifndef ESTRUTURADEDADOS2_H
+#define ESTRUTURADEDADOS2_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,9 +53,9 @@ void liberar_arvoreB(ArvoreB* arvore);
 long buscar_no(No* no, const char* placa);
 void combinar_no(No* no, int indice);
 Carro buscar_dados_por_placa(const char* placa);
-
 // Novas funções adicionadas
 void salvarDadosNoArquivo(const char* nome_arquivo, ArvoreB* arvore);
 void escreverArvoreBNoArquivo(FILE* arquivo, No* no);
 void carregarDadosDoArquivo(const char* nome_arquivo, ArvoreB* arvore);
+
 #endif
